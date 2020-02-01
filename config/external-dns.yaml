@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: external-dns
+  name: external-dns
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: external-dns
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get","watch","list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get","watch","list"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get","watch","list"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: external-dns-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: external-dns
+subjects:
+- kind: ServiceAccount
+  namespace: external-dns
+  name: external-dns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: external-dns
+  name: external-dns
+data:
+  domain-name: $cluster_domain
+  owner-id: $cluster_id
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: external-dns
+  name: external-dns
+data:
+  access-token: $external_dns_access_token_base64
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: external-dns
+  name: external-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: external-dns
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: external-dns
+  template:
+    metadata:
+      labels:
+        app: external-dns
+    spec:
+      serviceAccountName: external-dns
+      containers:
+      - name: external-dns
+        image: registry.opensource.zalan.do/teapot/external-dns:v0.5.18
+        env:
+        - name: DOMAIN_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: external-dns
+              key: domain-name
+        - name: DO_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: external-dns
+              key: access-token
+        - name: EXTERNAL_DNS_PROVIDER
+          value: digitalocean
+        - name: EXTERNAL_DNS_SOURCE
+          value: ingress
+        - name: EXTERNAL_DNS_DOMAIN_FILTER
+          value: $(DOMAIN_NAME)
+        - name: EXTERNAL_DNS_ANNOTATION_FILTER
+          value: external-dns
+        - name: EXTERNAL_DNS_TXT_PREFIX
+          value: _
+        - name: EXTERNAL_DNS_TXT_OWNER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: external-dns
+              key: owner-id

@@ -176,7 +176,14 @@ cat config/test.yaml \
   | kubectl apply -f -
 ```
 
-It may take a minute or two for everything to provision, but very soon you should be able to cURL `https://test.$cluster_domain` and see the text `OK`:
+It may take a minute or two for everything to provision.
+A good indication is to watch the `certificate` resource that cert-manager generates:
+
+```sh
+kubectl get certificates
+```
+
+Once the certificate is `Ready`, you should be able to cURL `https://test.$cluster_domain` and see the text `OK`:
 
 ```sh
 $ curl https://test.$cluster_domain

@@ -19,10 +19,10 @@ In the mean time, it should be possible to follow the steps in order, copying an
 ### Prerequisites
 
 In order to follow these instructions you'll need the following installed and on your `PATH`:
+
 - The [DigitalOcean CLI].
 - The [Kubernetes CLI].
 - [`jq`].
-
 
 ### Choose a name
 
@@ -64,9 +64,8 @@ They should all be `Running`.
 The NGINX Ingress Controller project maintains Kubernetes manifests that can be used to deploy the ingress controller:
 
 ```sh
-version=0.28.0
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-$version/deploy/static/mandatory.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-$version/deploy/static/provider/cloud-generic.yaml
+version=0.32.0
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-$version/deploy/static/provider/do/deploy.yaml
 ```
 
 This will crate a bunch of Kubernetes resources, including a `LoadBalancer` service.
@@ -74,35 +73,8 @@ The cluster will provision a DigitalOcean Load Balancer for this service, which 
 You can monitor progress by watching:
 
 ```sh
-kubectl --namespace ingress-nginx get services ingress-nginx
+kubectl --namespace ingress-nginx get services ingress-nginx-controller
 ```
-
-Unfortunately, there is a complex [compatibility issue] involving cert-manager, NGINX ingress, and Kubernetes networking which ultimately means that the default service configuration will not work properly for requests from inside the cluster.
-This is required for cert-manager to perform its 'self-testing' of challenges, and these cannot be disabled.
-
-Thankfully, there is a workaround that involves configuring a DNS record for the ingress service and applying an annotation that causes the DigitalOcean load balancer to set the service's ingress status to the DNS name, rather than an IP.
-This then bypasses an optimisation in the Kubernetes networking and ensures that requests from within the cluster are still routed through the load balancer, and so the ingress controller works as desired.
-
-Sadly, we cannot use ExternalDNS to configure this DNS record since that would create a circular reference: by setting the hostname of the service and the hostname for the load balancer to the same value, ExternalDNS would try to create a `CNAME` from the DNS record to itself.
-This needs to be worked around by adding the ingress DNS record manually with `doctl`.
-
-The following snippet can be used to apply the workaround:
-
-```sh
-load_balancer_id="$(kubectl --namespace ingress-nginx get services ingress-nginx --output json \
-  | jq -r '.metadata.annotations["kubernetes.digitalocean.com/load-balancer-id"]')"
-ingress_ip="$(doctl compute load-balancer get "$load_balancer_id" --output json \
-  | jq -r 'first | .ip')"
-doctl compute domain records create "$cluster_domain" \
-  --record-type A \
-  --record-name ingress-nginx \
-  --record-data "$ingress_ip"
-kubectl --namespace ingress-nginx annotate services ingress-nginx \
-  --overwrite \
-  "service.beta.kubernetes.io/do-loadbalancer-hostname=ingress-nginx.$cluster_domain"
-```
-
-**Note:** a side effect of this approach is that DNS records created by ExternalDNS will be `CNAME`s to the ingress DNS record.
 
 ### Deploy ExternalDNS
 
@@ -112,20 +84,21 @@ There are a lot of configuration options for ExternalDNS, and the following have
 - Only ingress resources will be used as sources for DNS names.
 - Ingress resources that want external DNS entries should be annotated with `external-dns: ''`.
 - Only subdomains of the cluster domain will be managed.
+  Deployed resources are named such that other instances of ExternalDNS could run in the same cluster in order to manage multiple domains.
 - `TXT` records will be used to track ownership of DNS records, and the cluster's ID will be used as
   the 'owner ID'.
   `TXT` records will be prefixed with `_`.
 - The functional DNS records will all be `CNAME`s to the ingress domain, due to the workaround required for cert-manager.
 
 ExternalDNS requires a DigitalOcean access token with write access in order to manage DNS entries.
-The recommendation is to create one named "ExternalDNS (&lt;cluster ID&gt;)".
+The recommendation is to create one named "ExternalDNS – &lt;cluster domain&gt; (&lt;cluster ID&gt;)".
 The following snippet will look up the cluster ID and request an access token:
 
 ```sh
 cluster_id="$(doctl kubernetes clusters get "$cluster_name" --output json \
   | jq -r 'first | .id')"
 {
-  read -rsp "Access token for ExternalDNS ($cluster_id): " external_dns_access_token
+  read -rsp "Access token for ExternalDNS – $cluster_domain – ($cluster_id): " external_dns_access_token
   echo >&2
   external_dns_access_token_base64="$(printf '%s' "$external_dns_access_token" | base64)"
 }
@@ -134,8 +107,9 @@ cluster_id="$(doctl kubernetes clusters get "$cluster_name" --output json \
 We can now deploy the ExernalDNS Kubernetes manifest:
 
 ```sh
+cluster_domain_dns_label="${cluster_domain//./-}"
 external_dns="$(cat config/external-dns.yaml)"
-for var in cluster_domain cluster_id external_dns_access_token_base64; do
+for var in cluster_domain_dns_label cluster_domain cluster_id external_dns_access_token_base64; do
   external_dns="$(echo "$external_dns" | sed "s/\$$var/${!var}/")"
 done
 echo "$external_dns" | kubectl apply -f -
@@ -151,12 +125,11 @@ kubectl -n external-dns logs -l app=external-dns
 ### Deploy cert-manager
 
 The final component of the platform is cert-manager, which allows the Kubernetes cluster to provision TLS certificates based on the demands of ingress resources.
-Thankfully, with the above changes in place for the ingress controller, the installation can be performed with few surprises.
 
 Firstly, install cert-manager into the cluster using the official manifest:
 
 ```sh
-version=v0.13.0
+version=v0.14.3
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/$version/cert-manager.yaml
 ```
 
@@ -167,13 +140,27 @@ Check the cert-manager deployment is running smoothly with:
 kubectl --namespace cert-manager logs -l app=cert-manager
 ```
 
+We are going to use DNS solvers for certificate request challenges, and as such need to supply a DigitalOcean access token with write access.
+The recommendation is to create one named "cert-manager – &lt;cluster domain&gt; (&lt;cluster ID&gt;)".
+The following snippet will request an access token:
+
+```sh
+{
+  read -rsp "Access token for cert-manager – $cluster_domain – ($cluster_id): " cert_manager_access_token
+  echo >&2
+  cert_manager_access_token_base64="$(printf '%s' "$cert_manager_access_token" | base64)"
+}
+```
+
 We can then create issuers for Lets Encrypt using the included Kubernetes manifest:
 
 ```sh
 {
   read -p 'Email to use with Lets Encrypt: ' lets_encrypt_email
   cat config/cluster-issuers.yaml \
+    | sed "s/\$cluster_domain/$cluster_domain/" \
     | sed "s/\$lets_encrypt_email/$lets_encrypt_email/" \
+    | sed "s/\$cert_manager_access_token_base64/$cert_manager_access_token_base64/" \
     | kubectl apply -f -
 }
 ```

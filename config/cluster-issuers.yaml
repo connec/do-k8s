@@ -1,18 +1,31 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: solver-dns
+  namespace: cert-manager
+data:
+  access-token: $cert_manager_access_token_base64
+---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
  name: letsencrypt-staging
  namespace: cert-manager
 spec:
- acme:
-   server: https://acme-staging-v02.api.letsencrypt.org/directory
-   email: $lets_encrypt_email
-   privateKeySecretRef:
-     name: letsencrypt-staging
-   solvers:
-   - http01:
-       ingress:
-         class: nginx
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: $lets_encrypt_email
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+    - dns01:
+        digitalocean:
+          tokenSecretRef:
+            name: solver-dns
+            key: access-token
+      selector:
+        dnsZones:
+        - $cluster_domain
 ---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
@@ -26,6 +39,11 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
-    - http01:
-        ingress:
-          class: nginx
+    - dns01:
+        digitalocean:
+          tokenSecretRef:
+            name: solver-dns
+            key: access-token
+      selector:
+        dnsZones:
+        - $cluster_domain

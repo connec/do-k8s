@@ -15,10 +15,7 @@ metadata:
   name: external-dns
 rules:
 - apiGroups: [""]
-  resources: ["services"]
-  verbs: ["get","watch","list"]
-- apiGroups: [""]
-  resources: ["pods"]
+  resources: ["services","endpoints","pods"]
   verbs: ["get","watch","list"]
 - apiGroups: ["extensions"]
   resources: ["ingresses"]
@@ -44,7 +41,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: external-dns
-  name: external-dns
+  name: external-dns-$cluster_domain_dns_label
 data:
   domain-name: $cluster_domain
   owner-id: $cluster_id
@@ -53,7 +50,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   namespace: external-dns
-  name: external-dns
+  name: external-dns-$cluster_domain_dns_label
 data:
   access-token: $external_dns_access_token_base64
 ---
@@ -61,7 +58,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: external-dns
-  name: external-dns
+  name: external-dns-$cluster_domain_dns_label
 spec:
   replicas: 1
   selector:
@@ -80,17 +77,17 @@ spec:
       serviceAccountName: external-dns
       containers:
       - name: external-dns
-        image: registry.opensource.zalan.do/teapot/external-dns:v0.5.18
+        image: registry.opensource.zalan.do/teapot/external-dns:v0.7.1
         env:
         - name: DOMAIN_NAME
           valueFrom:
             configMapKeyRef:
-              name: external-dns
+              name: external-dns-$cluster_domain_dns_label
               key: domain-name
         - name: DO_TOKEN
           valueFrom:
             secretKeyRef:
-              name: external-dns
+              name: external-dns-$cluster_domain_dns_label
               key: access-token
         - name: EXTERNAL_DNS_PROVIDER
           value: digitalocean
@@ -105,5 +102,5 @@ spec:
         - name: EXTERNAL_DNS_TXT_OWNER_ID
           valueFrom:
             configMapKeyRef:
-              name: external-dns
+              name: external-dns-$cluster_domain_dns_label
               key: owner-id

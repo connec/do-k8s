@@ -46,7 +46,7 @@ cluster_domain='connec.co.uk'
 Now we can create the cluster.
 
 ```sh
-readarray -t cluster_args < <(cat config/cluster-args.json | jq -r '.[]')
+readarray -t cluster_args < <(cat deployment/cluster-args.json | jq -r '.[]')
 doctl kubernetes clusters create "$cluster_name" "${cluster_args[@]}"
 ```
 
@@ -108,7 +108,7 @@ We can now deploy the ExernalDNS Kubernetes manifest:
 
 ```sh
 cluster_domain_dns_label="${cluster_domain//./-}"
-external_dns="$(cat config/external-dns.yaml)"
+external_dns="$(cat deployment/external-dns.yaml)"
 for var in cluster_domain_dns_label cluster_domain cluster_id external_dns_access_token_base64; do
   external_dns="$(echo "$external_dns" | sed "s/\$$var/${!var}/")"
 done
@@ -157,7 +157,7 @@ We can then create issuers for Lets Encrypt using the included Kubernetes manife
 ```sh
 {
   read -p 'Email to use with Lets Encrypt: ' lets_encrypt_email
-  cat config/cluster-issuers.yaml \
+  cat deployment/cluster-issuers.yaml \
     | sed "s/\$cluster_domain/$cluster_domain/" \
     | sed "s/\$lets_encrypt_email/$lets_encrypt_email/" \
     | sed "s/\$cert_manager_access_token_base64/$cert_manager_access_token_base64/" \
@@ -171,7 +171,7 @@ Finally, we can test the platform!
 Deploy the included test Kubernetes manifest:
 
 ```sh
-cat config/test.yaml \
+cat deployment/test.yaml \
   | sed "s/\$cluster_domain/$cluster_domain/" \
   | kubectl apply -f -
 ```
@@ -193,7 +193,7 @@ OK
 Once satisfied, clean up the test:
 
 ```sh
-kubectl delete -f config/test.yaml
+kubectl delete -f deployment/test.yaml
 ```
 
 And you're done.
@@ -203,7 +203,7 @@ And you're done.
 [DigitalOcean load balancer]: https://www.digitalocean.com/products/load-balancer/
 [ExternalDNS]: https://github.com/kubernetes-sigs/external-dns
 [cert-manager]: https://cert-manager.io/
-[cluster definition]: config/cluster-args.json
+[cluster definition]: deployment/cluster-args.json
 [DigitalOcean CLI]: https://github.com/digitalocean/doctl#installing-doctl
 [Kubernetes CLI]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 [`jq`]: https://stedolan.github.io/jq/download/

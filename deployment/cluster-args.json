@@ -1,5 +1,5 @@
 [
   "--region=lon1",
-  "--version=1.16.6-do.2",
+  "--version=1.17.5-do.0",
   "--node-pool=name=default;size=s-2vcpu-4gb;count=1"
 ]

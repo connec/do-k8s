@@ -110,7 +110,7 @@ We can now deploy the ExernalDNS Kubernetes manifest:
 
 ```sh
 export CLUSTER_DOMAIN_DNS_LABEL="${CLUSTER_DOMAIN//./-}"
-k8s-tpl --filename deployment/external-dns.yaml \
+k8s-tpl deployment/external-dns.yaml \
   | kubectl apply -f -
 ```
 
@@ -158,7 +158,7 @@ We can then create issuers for Lets Encrypt using the included Kubernetes manife
   read -p 'Email to use with Lets Encrypt: ' LETS_ENCRYPT_EMAIL
   export LETS_ENCRYPT_EMAIL
 
-  k8s-tpl --filename deployment/cluster-issuers.yaml \
+  k8s-tpl deployment/cluster-issuers.yaml \
     | kubectl apply -f -
 }
 ```
@@ -169,7 +169,7 @@ Finally, we can test the platform!
 Deploy the included test Kubernetes manifest:
 
 ```sh
-k8s-tpl --filename deployment/test.yaml \
+k8s-tpl deployment/test.yaml \
   | kubectl apply -f -
 ```
 
@@ -190,7 +190,7 @@ OK
 Once satisfied, clean up the test:
 
 ```sh
-k8s-tpl --filename deployment/test.yaml \
+k8s-tpl deployment/test.yaml \
   | kubectl delete -f -
 ```
 

@@ -41,10 +41,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - test.$cluster_domain
+    - test.{{ .Env.CLUSTER_DOMAIN }}
     secretName: test-tls
   rules:
-  - host: test.$cluster_domain
+  - host: test.{{ .Env.CLUSTER_DOMAIN }}
     http:
       paths:
       - path: /

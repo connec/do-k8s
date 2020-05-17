@@ -23,22 +23,24 @@ In order to follow these instructions you'll need the following installed and on
 - The [DigitalOcean CLI].
 - The [Kubernetes CLI].
 - [`jq`].
+- [`k8s-tpl`].
 
 ### Choose a name
 
 The cluster in Digital Ocean Kubernetes needs a name.
 Furthermore, we need a domain name under which DNS entires should be created by ExternalDNS.
 
-The snippets below will assume the following variables are set with the desired names (they do not need to be exported):
+The snippets below will assume the following variables are set with the desired names:
 
 - **`cluster_name`**: The name for the DigitalOcean Kubernetes cluster.
-- **`cluster_domain`**: The DigitalOcean Domain to use for external DNS.
+- **`CLUSTER_DOMAIN`**: The DigitalOcean Domain to use for external DNS.
+  This should be exported.
 
 For example:
 
 ```sh
 cluster_name='default'
-cluster_domain='connec.co.uk'
+export CLUSTER_DOMAIN='connec.co.uk'
 ```
 
 ### Create a cluster
@@ -95,24 +97,21 @@ The recommendation is to create one named "ExternalDNS – &lt;cluster domain&gt
 The following snippet will look up the cluster ID and request an access token:
 
 ```sh
-cluster_id="$(doctl kubernetes clusters get "$cluster_name" --output json \
+export CLUSTER_ID="$(doctl kubernetes clusters get "$cluster_name" --output json \
   | jq -r 'first | .id')"
 {
-  read -rsp "Access token for ExternalDNS – $cluster_domain – ($cluster_id): " external_dns_access_token
+  read -rsp "Access token for ExternalDNS – $CLUSTER_DOMAIN – ($CLUSTER_ID): " external_dns_access_token
   echo >&2
-  external_dns_access_token_base64="$(printf '%s' "$external_dns_access_token" | base64)"
+  export EXTERNAL_DNS_ACCESS_TOKEN_BASE64="$(printf '%s' "$external_dns_access_token" | base64)"
 }
 ```
 
 We can now deploy the ExernalDNS Kubernetes manifest:
 
 ```sh
-cluster_domain_dns_label="${cluster_domain//./-}"
-external_dns="$(cat deployment/external-dns.yaml)"
-for var in cluster_domain_dns_label cluster_domain cluster_id external_dns_access_token_base64; do
-  external_dns="$(echo "$external_dns" | sed "s/\$$var/${!var}/")"
-done
-echo "$external_dns" | kubectl apply -f -
+export CLUSTER_DOMAIN_DNS_LABEL="${CLUSTER_DOMAIN//./-}"
+k8s-tpl --filename deployment/external-dns.yaml \
+  | kubectl apply -f -
 ```
 
 This will create several Kubernetes resources.
@@ -146,9 +145,9 @@ The following snippet will request an access token:
 
 ```sh
 {
-  read -rsp "Access token for cert-manager – $cluster_domain – ($cluster_id): " cert_manager_access_token
+  read -rsp "Access token for cert-manager – $CLUSTER_DOMAIN – ($CLUSTER_ID): " cert_manager_access_token
   echo >&2
-  cert_manager_access_token_base64="$(printf '%s' "$cert_manager_access_token" | base64)"
+  export CERT_MANAGER_ACCESS_TOKEN_BASE64="$(printf '%s' "$cert_manager_access_token" | base64)"
 }
 ```
 
@@ -156,11 +155,10 @@ We can then create issuers for Lets Encrypt using the included Kubernetes manife
 
 ```sh
 {
-  read -p 'Email to use with Lets Encrypt: ' lets_encrypt_email
-  cat deployment/cluster-issuers.yaml \
-    | sed "s/\$cluster_domain/$cluster_domain/" \
-    | sed "s/\$lets_encrypt_email/$lets_encrypt_email/" \
-    | sed "s/\$cert_manager_access_token_base64/$cert_manager_access_token_base64/" \
+  read -p 'Email to use with Lets Encrypt: ' LETS_ENCRYPT_EMAIL
+  export LETS_ENCRYPT_EMAIL
+
+  k8s-tpl --filename deployment/cluster-issuers.yaml \
     | kubectl apply -f -
 }
 ```
@@ -171,8 +169,7 @@ Finally, we can test the platform!
 Deploy the included test Kubernetes manifest:
 
 ```sh
-cat deployment/test.yaml \
-  | sed "s/\$cluster_domain/$cluster_domain/" \
+k8s-tpl --filename deployment/test.yaml \
   | kubectl apply -f -
 ```
 
@@ -183,17 +180,18 @@ A good indication is to watch the `certificate` resource that cert-manager gener
 kubectl get certificates
 ```
 
-Once the certificate is `Ready`, you should be able to cURL `https://test.$cluster_domain` and see the text `OK`:
+Once the certificate is `Ready`, you should be able to cURL `https://test.$CLUSTER_DOMAIN` and see the text `OK`:
 
 ```sh
-$ curl https://test.$cluster_domain
+$ curl https://test.$CLUSTER_DOMAIN
 OK
 ```
 
 Once satisfied, clean up the test:
 
 ```sh
-kubectl delete -f deployment/test.yaml
+k8s-tpl --filename deployment/test.yaml \
+  | kubectl delete -f -
 ```
 
 And you're done.
@@ -207,4 +205,4 @@ And you're done.
 [DigitalOcean CLI]: https://github.com/digitalocean/doctl#installing-doctl
 [Kubernetes CLI]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 [`jq`]: https://stedolan.github.io/jq/download/
-[compatibility issue]: https://github.com/jetstack/cert-manager/issues/863#issuecomment-567062996
+[`k8s-tpl`]: https://github.com/connec/k8s-tpl/

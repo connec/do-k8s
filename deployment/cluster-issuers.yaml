@@ -4,7 +4,7 @@ metadata:
   name: solver-dns
   namespace: cert-manager
 data:
-  access-token: $cert_manager_access_token_base64
+  access-token: {{ .Env.CERT_MANAGER_ACCESS_TOKEN_BASE64 }}
 ---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
@@ -14,7 +14,7 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: $lets_encrypt_email
+    email: {{ .Env.LETS_ENCRYPT_EMAIL }}
     privateKeySecretRef:
       name: letsencrypt-staging
     solvers:
@@ -25,7 +25,7 @@ spec:
             key: access-token
       selector:
         dnsZones:
-        - $cluster_domain
+        - {{ .Env.CLUSTER_DOMAIN }}
 ---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
@@ -35,7 +35,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: $lets_encrypt_email
+    email: {{ .Env.LETS_ENCRYPT_EMAIL }}
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
@@ -46,4 +46,4 @@ spec:
             key: access-token
       selector:
         dnsZones:
-        - $cluster_domain
+        - {{ .Env.CLUSTER_DOMAIN }}

@@ -41,24 +41,24 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: external-dns
-  name: external-dns-$cluster_domain_dns_label
+  name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
 data:
-  domain-name: $cluster_domain
-  owner-id: $cluster_id
+  domain-name: {{ .Env.CLUSTER_DOMAIN }}
+  owner-id: {{ .Env.CLUSTER_ID }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   namespace: external-dns
-  name: external-dns-$cluster_domain_dns_label
+  name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
 data:
-  access-token: $external_dns_access_token_base64
+  access-token: {{ .Env.EXTERNAL_DNS_ACCESS_TOKEN_BASE64 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: external-dns
-  name: external-dns-$cluster_domain_dns_label
+  name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
 spec:
   replicas: 1
   selector:
@@ -82,12 +82,12 @@ spec:
         - name: DOMAIN_NAME
           valueFrom:
             configMapKeyRef:
-              name: external-dns-$cluster_domain_dns_label
+              name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
               key: domain-name
         - name: DO_TOKEN
           valueFrom:
             secretKeyRef:
-              name: external-dns-$cluster_domain_dns_label
+              name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
               key: access-token
         - name: EXTERNAL_DNS_PROVIDER
           value: digitalocean
@@ -102,5 +102,5 @@ spec:
         - name: EXTERNAL_DNS_TXT_OWNER_ID
           valueFrom:
             configMapKeyRef:
-              name: external-dns-$cluster_domain_dns_label
+              name: external-dns-{{ .Env.CLUSTER_DOMAIN_DNS_LABEL }}
               key: owner-id

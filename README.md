@@ -4,12 +4,12 @@ Configuration-as-code and documentation for a little Kubernetes platform.
 
 The "Kubernetes platform" consists of:
 
-- A Kubernetes cluster, of course, running on [DigitalOcean Kubernetes].
-- An [NGINX Ingress Controller] to handle host-based routing of Ingress resources, backed by a [DigitalOcean load balancer].
-- [ExternalDNS] to allow managing DNS records from within Kubernetes.
-- [cert-manager] to automatically provision and renew certificates for Ingress TLS hosts.
+- A Kubernetes cluster, of course, running on [DigitalOcean Kubernetes](https://www.digitalocean.com/products/kubernetes/).
+- An [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) to handle host-based routing of Ingress resources, backed by a [DigitalOcean load balancer](https://www.digitalocean.com/products/load-balancer/).
+- [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) to allow managing DNS records from within Kubernetes.
+- [cert-manager](https://cert-manager.io/) to automatically provision and renew certificates for Ingress TLS hosts.
 
-The total cost for this setup, based on the included [cluster definition], is $30/month ($20/month for a 4GB, 2 vCPU droplet; $10/month for the load balancer).
+The total cost for this setup, based on the included [cluster definition](deployment/cluster-args.json), is $30/month ($20/month for a 4GB, 2 vCPU droplet; $10/month for the load balancer).
 
 ## Usage
 
@@ -20,10 +20,10 @@ In the mean time, it should be possible to follow the steps in order, copying an
 
 In order to follow these instructions you'll need the following installed and on your `PATH`:
 
-- The [DigitalOcean CLI].
-- The [Kubernetes CLI].
-- [`jq`].
-- [`k8s-tpl`].
+- The [DigitalOcean CLI](https://github.com/digitalocean/doctl#installing-doctl).
+- The [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- [`jq`](https://stedolan.github.io/jq/download/).
+- [`k8s-tpl`](https://github.com/connec/k8s-tpl/).
 
 ### Choose a name
 
@@ -195,14 +195,3 @@ k8s-tpl deployment/test.yaml \
 ```
 
 And you're done.
-
-[DigitalOcean Kubernetes]: https://www.digitalocean.com/products/kubernetes/
-[NGINX Ingress Controller]: https://kubernetes.github.io/ingress-nginx/
-[DigitalOcean load balancer]: https://www.digitalocean.com/products/load-balancer/
-[ExternalDNS]: https://github.com/kubernetes-sigs/external-dns
-[cert-manager]: https://cert-manager.io/
-[cluster definition]: deployment/cluster-args.json
-[DigitalOcean CLI]: https://github.com/digitalocean/doctl#installing-doctl
-[Kubernetes CLI]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
-[`jq`]: https://stedolan.github.io/jq/download/
-[`k8s-tpl`]: https://github.com/connec/k8s-tpl/

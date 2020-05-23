@@ -111,8 +111,7 @@ helm install do-k8s ./chart \
   --set certIssuers.acme.dnsZones[0]=$cluster_domain \
   --set digitalocean.apiToken=$digitalocean_api_token \
   --set external-dns.txtOwnerId=$cluster_id \
-  --set external-dns.domainFilters[0]=$cluster_domain \
-  --set "external-dns.digitalocean.secretName=do-k8s"
+  --set external-dns.domainFilters[0]=$cluster_domain
 ```
 
 This will deploy a functional do-k8s setup into a `do-k8s` namespace based on the configuration set in environment variables above.

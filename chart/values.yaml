@@ -7,3 +7,6 @@ external-dns:
   txtPrefix: _
   sources:
   - ingress
+  digitalocean:
+    # This has a dependency on the release name being "do-k8s", but the CRDs already have that dependency.
+    secretName: do-k8s

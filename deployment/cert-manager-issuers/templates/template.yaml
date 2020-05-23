@@ -1,49 +1,47 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: solver-dns
-  namespace: cert-manager
+  name: {{ .Release.Name }}-solver-dns
+  namespace: {{ .Release.Namespace }}
 data:
-  access-token: {{ .Env.CERT_MANAGER_ACCESS_TOKEN_BASE64 }}
+  access-token: {{ .Values.accessToken | b64enc | quote }}
 ---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
- name: letsencrypt-staging
- namespace: cert-manager
+ name: {{ .Release.Name }}-staging
+ namespace: {{ .Release.Namespace }}
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: {{ .Env.LETS_ENCRYPT_EMAIL }}
+    email: {{ .Values.email }}
     privateKeySecretRef:
-      name: letsencrypt-staging
+      name: {{ .Release.Name }}-staging
     solvers:
     - dns01:
         digitalocean:
           tokenSecretRef:
-            name: solver-dns
+            name: {{ .Release.Name }}-solver-dns
             key: access-token
       selector:
-        dnsZones:
-        - {{ .Env.CLUSTER_DOMAIN }}
+        dnsZones: {{ .Values.dnsZones }}
 ---
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
-  name: letsencrypt-prod
-  namespace: cert-manager
+  name: {{ .Release.Name }}-prod
+  namespace: {{ .Release.Namespace }}
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: {{ .Env.LETS_ENCRYPT_EMAIL }}
+    email: {{ .Values.email }}
     privateKeySecretRef:
-      name: letsencrypt-prod
+      name: {{ .Release.Name }}-prod
     solvers:
     - dns01:
         digitalocean:
           tokenSecretRef:
-            name: solver-dns
+            name: {{ .Release.Name }}-solver-dns
             key: access-token
       selector:
-        dnsZones:
-        - {{ .Env.CLUSTER_DOMAIN }}
+        dnsZones: {{ .Values.dnsZones }}

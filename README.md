@@ -22,8 +22,18 @@ In order to follow these instructions you'll need the following installed and on
 
 - The [DigitalOcean CLI](https://github.com/digitalocean/doctl#installing-doctl).
 - The [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- [Helm](https://helm.sh/docs/intro/install/).
 - [`jq`](https://stedolan.github.io/jq/download/).
-- [`k8s-tpl`](https://github.com/connec/k8s-tpl/).
+
+You will also need the following Helm repositories:
+
+```sh
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add jetstack https://charts.jetstack.io
+```
+
+It's recommended to update your repositories using `helm repo update`.
 
 ### Choose a name
 
@@ -33,14 +43,13 @@ Furthermore, we need a domain name under which DNS entires should be created by 
 The snippets below will assume the following variables are set with the desired names:
 
 - **`cluster_name`**: The name for the DigitalOcean Kubernetes cluster.
-- **`CLUSTER_DOMAIN`**: The DigitalOcean Domain to use for external DNS.
-  This should be exported.
+- **`cluster_domain`**: The DigitalOcean Domain to use for external DNS.
 
 For example:
 
 ```sh
 cluster_name='default'
-export CLUSTER_DOMAIN='connec.co.uk'
+cluster_domain='connec.co.uk'
 ```
 
 ### Create a cluster
@@ -63,11 +72,12 @@ They should all be `Running`.
 
 ### Deploy the NGINX ingress controller
 
-The NGINX Ingress Controller project maintains Kubernetes manifests that can be used to deploy the ingress controller:
+The NGINX Ingress Controller project maintains a Helm chart that can be used to deploy the ingress controller:
 
 ```sh
-version=0.32.0
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-$version/deploy/static/provider/do/deploy.yaml
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace
 ```
 
 This will crate a bunch of Kubernetes resources, including a `LoadBalancer` service.
@@ -84,59 +94,58 @@ ExternalDNS allows us to manage DNS records from within Kubernetes by annotating
 There are a lot of configuration options for ExternalDNS, and the following have been chosen for simplicity and consistency:
 
 - Only ingress resources will be used as sources for DNS names.
-- Ingress resources that want external DNS entries should be annotated with `external-dns: ''`.
 - Only subdomains of the cluster domain will be managed.
   Deployed resources are named such that other instances of ExternalDNS could run in the same cluster in order to manage multiple domains.
 - `TXT` records will be used to track ownership of DNS records, and the cluster's ID will be used as
   the 'owner ID'.
   `TXT` records will be prefixed with `_`.
-- The functional DNS records will all be `CNAME`s to the ingress domain, due to the workaround required for cert-manager.
 
 ExternalDNS requires a DigitalOcean access token with write access in order to manage DNS entries.
 The recommendation is to create one named "ExternalDNS – &lt;cluster domain&gt; (&lt;cluster ID&gt;)".
 The following snippet will look up the cluster ID and request an access token:
 
 ```sh
-export CLUSTER_ID="$(doctl kubernetes clusters get "$cluster_name" --output json \
+cluster_id="$(doctl kubernetes clusters get "$cluster_name" --output json \
   | jq -r 'first | .id')"
-{
-  read -rsp "Access token for ExternalDNS – $CLUSTER_DOMAIN – ($CLUSTER_ID): " external_dns_access_token
-  echo >&2
-  export EXTERNAL_DNS_ACCESS_TOKEN_BASE64="$(printf '%s' "$external_dns_access_token" | base64)"
-}
+read -rsp "Access token for ExternalDNS – $cluster_domain – ($cluster_id): " external_dns_access_token
 ```
 
-We can now deploy the ExernalDNS Kubernetes manifest:
+We can now deploy ExernalDNS using Helm:
 
 ```sh
-export CLUSTER_DOMAIN_DNS_LABEL="${CLUSTER_DOMAIN//./-}"
-k8s-tpl deployment/external-dns.yaml \
-  | kubectl apply -f -
+helm install external-dns-${cluster_domain//./-} bitnami/external-dns \
+  --namespace external-dns \
+  --create-namespace \
+  --values deployment/external-dns.yaml \
+  --set txtOwnerId=$cluster_id \
+  --set domainFilters[0]=$cluster_domain \
+  --set "digitalocean.apiToken=$external_dns_access_token"
 ```
 
 This will create several Kubernetes resources.
 You can check that the ExternalDNS agent started correctly with:
 
 ```sh
-kubectl -n external-dns logs -l app=external-dns
+kubectl --namespace external-dns logs -l app.kubernetes.io/name=external-dns
 ```
 
 ### Deploy cert-manager
 
 The final component of the platform is cert-manager, which allows the Kubernetes cluster to provision TLS certificates based on the demands of ingress resources.
 
-Firstly, install cert-manager into the cluster using the official manifest:
+Firstly, install cert-manager into the cluster using Helm:
 
 ```sh
-version=v0.14.3
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/$version/cert-manager.yaml
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true
 ```
 
-This will create a slew of Kubernetes custom resource definitions and resources.
 Check the cert-manager deployment is running smoothly with:
 
 ```sh
-kubectl --namespace cert-manager logs -l app=cert-manager
+kubectl --namespace cert-manager logs -l app.kubernetes.io/name=cert-manager
 ```
 
 We are going to use DNS solvers for certificate request challenges, and as such need to supply a DigitalOcean access token with write access.
@@ -144,54 +153,54 @@ The recommendation is to create one named "cert-manager – &lt;cluster domain&g
 The following snippet will request an access token:
 
 ```sh
-{
-  read -rsp "Access token for cert-manager – $CLUSTER_DOMAIN – ($CLUSTER_ID): " cert_manager_access_token
-  echo >&2
-  export CERT_MANAGER_ACCESS_TOKEN_BASE64="$(printf '%s' "$cert_manager_access_token" | base64)"
-}
+read -rsp "Access token for cert-manager – $cluster_domain – ($cluster_id): " cert_manager_access_token
 ```
 
 We can then create issuers for Lets Encrypt using the included Kubernetes manifest:
 
 ```sh
 {
-  read -p 'Email to use with Lets Encrypt: ' LETS_ENCRYPT_EMAIL
-  export LETS_ENCRYPT_EMAIL
-
-  k8s-tpl deployment/cluster-issuers.yaml \
-    | kubectl apply -f -
+  read -p 'Email to use with Lets Encrypt: ' lets_encrypt_email
+  echo >&2
+  helm install cert-manager-issuers ./deployment/cert-manager-issuers \
+    --namespace cert-manager \
+    --set email=$lets_encrypt_email \
+    --set dnsZones[0]=$cluster_domain \
+    --set "accessToken=$cert_manager_access_token"
 }
 ```
 
 ### Test the platform
 
 Finally, we can test the platform!
-Deploy the included test Kubernetes manifest:
+Deploy the included Helm chart:
 
 ```sh
-k8s-tpl deployment/test.yaml \
-  | kubectl apply -f -
+helm install test ./deployment/test \
+  --namespace test \
+  --create-namespace \
+  --set clusterDomain=$cluster_domain
 ```
 
 It may take a minute or two for everything to provision.
 A good indication is to watch the `certificate` resource that cert-manager generates:
 
 ```sh
-kubectl get certificates
+kubectl --namespace test get certificates
 ```
 
-Once the certificate is `Ready`, you should be able to cURL `https://test.$CLUSTER_DOMAIN` and see the text `OK`:
+Once the certificate is `Ready`, you should be able to cURL `https://test.$cluster_domain` and see the text `OK`:
 
 ```sh
-$ curl https://test.$CLUSTER_DOMAIN
+$ curl https://test.$cluster_domain
 OK
 ```
 
 Once satisfied, clean up the test:
 
 ```sh
-k8s-tpl deployment/test.yaml \
-  | kubectl delete -f -
+helm delete test --namespace test
+kubectl delete namespace test
 ```
 
 And you're done.

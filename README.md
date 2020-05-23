@@ -36,7 +36,7 @@ read -p 'Cluster name: ' cluster_name
 ```
 
 Now we can create a cluster using the DigitalOcean CLI.
-As noted above, this guide opts for a single 2 vCPU, 4GB memory droplet ($20/Month).
+As noted above, this guide opts for a single 2 vCPU, 4GB memory droplet ($20/month).
 
 **Note:** You can find available regions, sizes, and versions using `doctl kubernetes options regions|sizes|versions`.
 

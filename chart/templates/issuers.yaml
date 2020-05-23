@@ -1,0 +1,39 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+ name: {{ .Release.Name }}-issuer-staging
+ namespace: {{ .Release.Namespace }}
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: {{ .Values.certIssuers.acme.email | required "Missing required value certIssuers.acme.email (set one with --set 'certIssuers.acme.email=...')" }}
+    privateKeySecretRef:
+      name: {{ .Release.Name }}-issuer-staging
+    solvers:
+    - dns01:
+        digitalocean:
+          tokenSecretRef:
+            name: {{ .Release.Name }}
+            key: digitalocean_api_token
+      selector:
+        dnsZones: {{ .Values.certIssuers.acme.dnsZones | required "Mising required value certIssuers.acme.dnsZones (set one with --set 'certIssuers.acme.dnsZones=...')" }}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: {{ .Release.Name }}-issuer-prod
+  namespace: {{ .Release.Namespace }}
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{ .Values.certIssuers.acme.email | required "Missing required value certIssuers.acme.email (set one with --set 'certIssuers.acme.email=...')" }}
+    privateKeySecretRef:
+      name: {{ .Release.Name }}-issuer-prod
+    solvers:
+    - dns01:
+        digitalocean:
+          tokenSecretRef:
+            name: {{ .Release.Name }}
+            key: digitalocean_api_token
+      selector:
+        dnsZones: {{ .Values.certIssuers.acme.dnsZones | required "Mising required value certIssuers.acme.dnsZones (set one with --set 'certIssuers.acme.dnsZones=...')" }}

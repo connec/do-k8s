@@ -1,0 +1,9 @@
+certIssuers:
+  acme: {}
+  digitalocean: {}
+
+external-dns:
+  provider: digitalocean
+  txtPrefix: _
+  sources:
+  - ingress

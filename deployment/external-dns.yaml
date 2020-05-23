@@ -1,4 +1,0 @@
-provider: digitalocean
-txtPrefix: _
-sources:
-- ingress

@@ -117,15 +117,11 @@ helm install do-k8s ./chart \
 This will deploy a functional do-k8s setup into a `do-k8s` namespace based on the configuration set in environment variables above.
 You can override the following values:
 
-- `certIssuers.acme.email`: The email to for the do-k8s Let's Encrypt cluster issuers.
-- `certIssuers.acme.dnsZones`: The DNS zones the do-k8s cluster issuers should support.
-  The value in the command above uses the `$cluster_domain`.
-- `digitalocean.apiToken`: A DigitalOcean API token with write access.
 - `cert-manager.*`: See the [cert-manager chart documentation](https://hub.helm.sh/charts/jetstack/cert-manager).
 - `external-dns.*`: See the [external-dns chart documentation](https://hub.helm.sh/charts/bitnami/external-dns).
 - `ingress-nginx.*`: See the [ingress-nginx chart documentation](https://github.com/kubernetes/ingress-nginx/tree/master/charts/ingress-nginx).
 
-**Note:** due to limitations when installing CRDs with Helm, the release name and namespace must be `do-k8s` (or updated manually in `chart/crds/cert-manager.yaml`).
+**Note:** due to limitations when installing CRDs with Helm, the release name and namespace must be `do-k8s` (or updated manually in `chart/crds/*`).
 
 ### Test
 

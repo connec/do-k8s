@@ -9,12 +9,19 @@ The "Kubernetes platform" consists of:
 - [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) to allow managing DNS records from within Kubernetes.
 - [cert-manager](https://cert-manager.io/) to automatically provision and renew certificates for Ingress TLS hosts.
 
-This is a similar idea to [bitnami/kube-prod-runtime](https://github.com/bitnami/kube-prod-runtime), except this project exclusively supports DigitalOcean and aims to be deployable via Helm.
+This is a similar idea to [bitnami/kube-prod-runtime](https://github.com/bitnami/kube-prod-runtime), however this project differs in a couple of ways:
 
-The total cost for this setup, based on the settings suggested in the guide, is $30/month:
+- It's nowhere near as well tested or integrated.
+  I've spun it up and down a few times, but nothing more rigorous than that.
+- It's limited to DigitalOcean.
+  That's what I'm using for my personal projects, and in a professional context I'd just go all in with BKPR (better support and geared for production use).
+- It aims to be lightweight for both installation and resource usage.
+  You probably already have the needed dependencies installed, and the whole thing should run on a 2 vCPU, 4GB droplet with enough capacity left for a few lightweight web apps.
 
-- $20/month for a 4GB, 2 vCPU droplet
-- $10/month for the NGINX Ingress Controller's load balancer
+The total cost for this setup based on the settings suggested in the guide is $30/month:
+
+- $20/month for a 4GB, 2 vCPU droplet.
+- $10/month for the NGINX Ingress Controller's load balancer.
 
 ## Setup guide
 

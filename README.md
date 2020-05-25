@@ -86,6 +86,15 @@ We need a domain name under which DNS entries will be managed by ExternalDNS and
 read -p 'Cluster domain: ' cluster_domain
 ```
 
+If you have chosen a subdomain, you will also need to set the DNS zone (this is what ExternalDNS filters on):
+
+```sh
+{
+  read -p "Cluster domain filter: [$cluster_domain] " cluster_domain_filter
+  [[ -z "$cluster_domain_filter" ]] && cluster_domain_filter="$cluster_domain"
+}
+```
+
 #### Set an email for Let's Encrypt
 
 We need to specify an email address in order to generate certificates using Let's Encrypt.
@@ -118,7 +127,7 @@ helm install do-k8s ./chart \
   --set certIssuers.acme.dnsZones[0]=$cluster_domain \
   --set digitalocean.apiToken=$digitalocean_api_token \
   --set external-dns.txtOwnerId=$cluster_id \
-  --set external-dns.domainFilters[0]=$cluster_domain
+  --set external-dns.domainFilters[0]=$cluster_domain_filter
 ```
 
 This will deploy a functional do-k8s setup into a `do-k8s` namespace based on the configuration set in environment variables above.

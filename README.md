@@ -156,7 +156,7 @@ kubectl get certificates --namespace test
 Once it is, you should be able to hit the test endpoint:
 
 ```sh
-$ curl https://test.connec.co.uk/
+$ curl https://test.$cluster_domain
 OK
 ```
 

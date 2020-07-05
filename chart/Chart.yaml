@@ -5,7 +5,7 @@ description: A deployment framework for DigitalOcean Kubernetes.
 kubeVersion: ^1.17.0
 dependencies:
 - name: cert-manager
-  version: 0.15.0
+  version: ~0.15.0
   repository: https://charts.jetstack.io
 - name: external-dns
   version: ^3.0.2

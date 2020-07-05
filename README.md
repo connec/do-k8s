@@ -8,6 +8,7 @@ The "Kubernetes platform" consists of:
 - An [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) to handle host-based routing of Ingress resources, backed by a [DigitalOcean load balancer](https://www.digitalocean.com/products/load-balancer/).
 - [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) to allow managing DNS records from within Kubernetes.
 - [cert-manager](https://cert-manager.io/) to automatically provision and renew certificates for Ingress TLS hosts.
+- [Prometheus Operator](https://github.com/coreos/prometheus-operator) for cluster and application monitoring.
 
 This is a similar idea to [bitnami/kube-prod-runtime](https://github.com/bitnami/kube-prod-runtime), however this project differs in a couple of ways:
 
@@ -136,6 +137,7 @@ You can override the following values:
 - `cert-manager.*`: See the [cert-manager chart documentation](https://hub.helm.sh/charts/jetstack/cert-manager).
 - `external-dns.*`: See the [external-dns chart documentation](https://hub.helm.sh/charts/bitnami/external-dns).
 - `nginx-ingress-controller.*`: See the [nginx-ingress-controller chart documentation](https://hub.helm.sh/charts/bitnami/nginx-ingress-controller).
+- `prometheus-operator.*`: See the [prometheus-operator chart documentation](https://hub.helm.sh/charts/bitnami/prometheus-operator).
 
 **Note:** due to limitations when installing CRDs with Helm, the release name and namespace must be `do-k8s` (or updated manually in `chart/crds/*`).
 

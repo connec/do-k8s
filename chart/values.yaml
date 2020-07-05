@@ -2,6 +2,11 @@ certIssuers:
   acme: {}
   digitalocean: {}
 
+cert-manager:
+  prometheus:
+    servicemonitor:
+      enabled: true
+
 external-dns:
   provider: digitalocean
   txtPrefix: _
@@ -14,3 +19,7 @@ external-dns:
 nginx-ingress-controller:
   publishService:
     enabled: true
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true

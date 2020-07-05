@@ -10,3 +10,7 @@ external-dns:
   digitalocean:
     # This has a dependency on the release name being "do-k8s", but the CRDs already have that dependency.
     secretName: do-k8s
+
+nginx-ingress-controller:
+  publishService:
+    enabled: true

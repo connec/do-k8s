@@ -135,7 +135,7 @@ You can override the following values:
 
 - `cert-manager.*`: See the [cert-manager chart documentation](https://hub.helm.sh/charts/jetstack/cert-manager).
 - `external-dns.*`: See the [external-dns chart documentation](https://hub.helm.sh/charts/bitnami/external-dns).
-- `ingress-nginx.*`: See the [ingress-nginx chart documentation](https://github.com/kubernetes/ingress-nginx/tree/master/charts/ingress-nginx).
+- `nginx-ingress-controller.*`: See the [nginx-ingress-controller chart documentation](https://hub.helm.sh/charts/bitnami/nginx-ingress-controller).
 
 **Note:** due to limitations when installing CRDs with Helm, the release name and namespace must be `do-k8s` (or updated manually in `chart/crds/*`).
 
@@ -147,7 +147,7 @@ You can check that everything has settled using:
 kubectl --namespace do-k8s get all
 ```
 
-In particular, it may take a while for the `do-k8s-ingress-nginx-controller` service's `EXTERNAL-IP` to resolve from `PENDING`.
+In particular, it may take a while for the `do-k8s-nginx-ingress-controller` service's `EXTERNAL-IP` to resolve from `PENDING`.
 Once it has, you can launch a trivial deployment that uses ingress with DNS and TLS:
 
 ```sh

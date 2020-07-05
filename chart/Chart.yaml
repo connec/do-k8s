@@ -13,3 +13,6 @@ dependencies:
 - name: nginx-ingress-controller
   version: ^5.3.24
   repository: https://charts.bitnami.com/bitnami
+- name: prometheus-operator
+  version: ~0.22.3
+  repository: https://charts.bitnami.com/bitnami

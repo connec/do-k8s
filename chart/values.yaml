@@ -16,6 +16,15 @@ external-dns:
     # This has a dependency on the release name being "do-k8s", but the CRDs already have that dependency.
     secretName: do-k8s
 
+grafana:
+  datasources:
+    # This has a dependency on the release name being "do-k8s", but the CRDs already have that dependency.
+    secretName: do-k8s-grafana-datasources
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
 nginx-ingress-controller:
   publishService:
     enabled: true

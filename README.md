@@ -152,6 +152,9 @@ kubectl --namespace do-k8s get all
 ```
 
 In particular, it may take a while for the `do-k8s-nginx-ingress-controller` service's `EXTERNAL-IP` to resolve from `PENDING`.
+
+#### Ingress
+
 Once it has, you can launch a trivial deployment that uses ingress with DNS and TLS:
 
 ```sh
@@ -173,7 +176,40 @@ $ curl https://test.$cluster_domain
 OK
 ```
 
-Once you're satisfied, delete the test with:
+#### Dashboards
+
+The Grafana deployment includes a sidecar to inject `ConfigMap`s labelled with `do-k8s-grafana-dashboard` into Grafana as a dashboard.
+To test this, lets add the [Node Exporter Full](https://grafana.com/grafana/dashboards/1860) dashboard:
+
+```sh
+curl https://grafana.com/api/dashboards/1860 \
+  | jq .json \
+  | kubectl --namespace test create configmap dashboards --from-file=test.json=/dev/stdin
+kubectl --namespace test label configmaps dashboards do-k8s-grafana-dashboard=
+```
+
+To see the dashboard in Grafana, first extract the deployed password:
+
+```sh
+echo "Grafana password: $(kubectl get secrets do-k8s-grafana-admin \
+    --namespace do-k8s \
+    --output json \
+  | jq -r .data.GF_SECURITY_ADMIN_PASSWORD \
+  | base64 -D)"
+```
+
+Then, establish a local port connected to the Grafana service in the cluster:
+
+```sh
+kubectl port-forward svc/do-k8s-grafana 3000 \
+  --namespace do-k8s
+```
+
+Finally, you can open `http://localhost:3000` in your browser, sign in (as `admin`, with the password above), and navigate to Dashboards / dashboards / Node Exporter Full.
+
+#### Cleanup
+
+Once you're satisfied, delete the tests with:
 
 ```sh
 cat examples/test.yaml \

@@ -1,0 +1,35 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboard-sync
+rules:
+- apiGroups: ['']
+  resources: [configmaps]
+  verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboard-sync
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ template "grafana.fullname" (deepCopy . | mergeOverwrite (dict "Values" (dict "nameOverride" "grafana"))) }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-grafana-dashboard-sync
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-grafana-datasources
+  namespace: {{ .Release.Namespace }}
+stringData:
+  prometheus.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://{{ template "prometheus-operator.prometheus.fullname" (deepCopy . | mergeOverwrite (dict "Values" (dict "nameOverride" "prometheus-operator"))) }}.{{ .Release.Namespace }}.svc.cluster.local:9090

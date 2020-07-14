@@ -20,6 +20,27 @@ grafana:
   datasources:
     # This has a dependency on the release name being "do-k8s", but the CRDs already have that dependency.
     secretName: do-k8s-grafana-datasources
+  dashboardsProvider:
+    enabled: true
+  extraVolumes:
+  - name: dashboards
+    emptyDir: {}
+  extraVolumeMounts:
+  - name: dashboards
+    mountPath: /opt/bitnami/grafana/dashboards
+  sidecars:
+  - name: dashboard-sync
+    image: kiwigrid/k8s-sidecar:0.1.178
+    env:
+    - name: LABEL
+      value: do-k8s-grafana-dashboard
+    - name: FOLDER
+      value: /opt/dashboards
+    - name: NAMESPACE
+      value: ALL
+    volumeMounts:
+    - name: dashboards
+      mountPath: /opt/dashboards
   metrics:
     enabled: true
     serviceMonitor:

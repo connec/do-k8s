@@ -8,6 +8,7 @@ cert-manager:
       enabled: true
 
 external-dns:
+  policy: sync
   provider: digitalocean
   txtPrefix: _
   sources:
